@@ -23,15 +23,21 @@ if (-not $Message) {
 function Send-JsonPost {
     param(
         [string]$Uri,
-        [hashtable]$Payload
+        [object]$Payload
     )
-    $json = $Payload | ConvertTo-Json -Compress
+    $json = $Payload | ConvertTo-Json -Compress -Depth 4
     $bytes = [System.Text.Encoding]::UTF8.GetBytes($json)
     Invoke-RestMethod -Uri $Uri -Method Post -ContentType 'application/json; charset=utf-8' -Body $bytes
 }
 
 if ($env:DISCORD_WEBHOOK_URL) {
-    Send-JsonPost -Uri $env:DISCORD_WEBHOOK_URL -Payload @{ content = $Message }
+    $discordPayload = [ordered]@{
+        content = "@everyone`n$Message"
+        allowed_mentions = @{
+            parse = @('everyone')
+        }
+    }
+    Send-JsonPost -Uri $env:DISCORD_WEBHOOK_URL -Payload $discordPayload
     Write-Host 'Discord alert sent.'
 }
 
