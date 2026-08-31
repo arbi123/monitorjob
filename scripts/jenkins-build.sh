@@ -7,10 +7,9 @@ export MONITOR_KEYWORDS="${MONITOR_KEYWORDS:-KOSOVE - IRELAND,KOSOVE - IRANDË,K
 mvn -B clean test
 EXIT_CODE=$?
 
-if [ $EXIT_CODE -ne 0 ] && [ -n "$DISCORD_WEBHOOK_URL" ]; then
-  curl -s -H "Content-Type: application/json" \
-    -d "{\"content\":\"🚨 **${JOB_NAME:-monitor}** build **#${BUILD_NUMBER:-local}** FAILED\\nIreland / Nations League keywords detected on ticket page.\\n${BUILD_URL:-}\"}" \
-    "$DISCORD_WEBHOOK_URL"
+if [ $EXIT_CODE -ne 0 ]; then
+  MESSAGE="🚨 **${JOB_NAME:-monitor}** build **#${BUILD_NUMBER:-local}** FAILED\nIreland / Nations League keywords detected on ticket page.\n${BUILD_URL:-}"
+  "$(dirname "$0")/send-alert.sh" "$MESSAGE"
 fi
 
 exit $EXIT_CODE

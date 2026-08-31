@@ -1,13 +1,13 @@
 # Web Keyword Monitor
 
-Selenium Java monitor that checks web pages for forbidden keywords. If any keyword is found in the page source, the test **fails** and Jenkins sends a Discord alert. If no keywords are found, the test **passes** silently.
+Selenium Java monitor that checks web pages for forbidden keywords. If any keyword is found in the page source, the test **fails** and Jenkins sends alerts to **Discord and Slack**. If no keywords are found, the test **passes** silently.
 
 ## How it works
 
 | Result | Meaning | Notification |
 |--------|---------|--------------|
 | **PASS** | No forbidden keywords on the page | None |
-| **FAIL** | One or more forbidden keywords found | Discord webhook |
+| **FAIL** | One or more forbidden keywords found | Discord + Slack webhooks |
 
 This is intentionally inverted from typical "assert text exists" tests — you are monitoring for **bad** content (errors, downtime messages, etc.).
 
@@ -83,13 +83,23 @@ mvn test
    sudo apt update && sudo apt install -y google-chrome-stable curl
    ```
 
-### 2. Store Discord webhook as a Jenkins credential
+### 2. Store webhook URLs as Jenkins credentials
 
-1. In Discord: Server Settings → Integrations → Webhooks → copy your webhook URL
-2. Jenkins → **Manage Jenkins** → **Credentials** → **(global)** → **Add Credentials**
+**Discord**
+1. Discord → Server Settings → Integrations → Webhooks → copy URL
+2. Jenkins → Credentials → Add:
    - Kind: **Secret text**
    - ID: `discord-webhook-url`
-   - Secret: paste your Discord webhook URL (do **not** commit this to GitHub)
+   - Secret: your Discord webhook URL
+
+**Slack**
+1. Slack → Apps → Incoming Webhooks → copy URL
+2. Jenkins → Credentials → Add:
+   - Kind: **Secret text**
+   - ID: `slack-webhook-url`
+   - Secret: your Slack webhook URL
+
+Do **not** commit webhook URLs to GitHub.
 
 ### 3. Create the Freestyle job
 
@@ -112,38 +122,48 @@ mvn test
 ### 6. Configure Build Environment
 
 1. Check **Use secret text(s) or file(s)** (Credentials Binding plugin — install if missing)
-2. Click **Add** → **Secret text**
-   - Variable: `DISCORD_WEBHOOK_URL`
-   - Credentials: select `discord-webhook-url`
+2. Add **Secret text** bindings:
+   - Variable: `DISCORD_WEBHOOK_URL` → credential `discord-webhook-url`
+   - Variable: `SLACK_WEBHOOK_URL` → credential `slack-webhook-url`
 
 ### 7. Configure Build Steps
 
-1. Click **Add build step** → **Execute shell**
-2. Paste:
+**Windows (recommended for your Jenkins agent):**
 
-   ```bash
-   export MONITOR_URLS='https://eu.ebileta.al/biglietteria/listaEventiPub.do'
-   export MONITOR_KEYWORDS='KOSOVE - IRELAND,KOSOVE - IRANDË,KOSOVE - IRLANDË,KOSOVE - IRANDA,IRELAND,IRLANDË,IRLANDA,Irealnd,ireland,Ireland,Irlandë,irlandë,Irlanda,irlanda,Nations league,nations league,NATIONS LEAGUE,Liga e Kombeve,liga e kombeve,LIGA E KOMBEVE,Liga e Kombëve,liga e kombëve,LIGA E KOMBËVE'
+Add **Execute Windows batch command**:
 
-   chmod +x scripts/jenkins-build.sh
-   ./scripts/jenkins-build.sh
-   ```
+```bat
+call scripts\jenkins-build.bat
+```
 
-   Or without the script:
+**Linux:**
 
-   ```bash
-   export MONITOR_URLS='https://eu.ebileta.al/biglietteria/listaEventiPub.do'
-   export MONITOR_KEYWORDS='KOSOVE - IRELAND,KOSOVE - IRANDË,KOSOVE - IRLANDË,KOSOVE - IRANDA,IRELAND,IRLANDË,IRLANDA,Irealnd,ireland,Ireland,Irlandë,irlandë,Irlanda,irlanda,Nations league,nations league,NATIONS LEAGUE,Liga e Kombeve,liga e kombeve,LIGA E KOMBEVE,Liga e Kombëve,liga e kombëve,LIGA E KOMBËVE'
+```bash
+chmod +x scripts/jenkins-build.sh
+./scripts/jenkins-build.sh
+```
 
-   mvn -B clean test
-   EXIT_CODE=$?
-   if [ $EXIT_CODE -ne 0 ]; then
-     curl -s -H "Content-Type: application/json" \
-       -d "{\"content\":\"🚨 **${JOB_NAME}** build **#${BUILD_NUMBER}** FAILED\\nIreland / Nations League tickets detected!\\n${BUILD_URL}\"}" \
-       "$DISCORD_WEBHOOK_URL"
-   fi
-   exit $EXIT_CODE
-   ```
+Or without the script:
+
+```bash
+export MONITOR_URLS='https://eu.ebileta.al/biglietteria/listaEventiPub.do'
+export MONITOR_KEYWORDS='KOSOVE - IRELAND,KOSOVE - IRANDË,...'
+
+mvn -B clean test
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
+  scripts/send-alert.sh "🚨 **${JOB_NAME}** build **#${BUILD_NUMBER}** FAILED - tickets detected! ${BUILD_URL}"
+fi
+exit $EXIT_CODE
+```
+
+### Test webhooks locally (PowerShell)
+
+```powershell
+$env:DISCORD_WEBHOOK_URL = "your-discord-webhook-url"
+$env:SLACK_WEBHOOK_URL = "your-slack-webhook-url"
+powershell -ExecutionPolicy Bypass -File scripts/test-webhooks.ps1
+```
 
 ### 8. Save and run
 
@@ -188,5 +208,5 @@ git push -u origin main
 |---------|-----|
 | `chromedriver` / Chrome version mismatch | WebDriverManager should auto-resolve; ensure Chrome is installed on the agent |
 | Tests hang | Increase `browser.timeout.seconds` or add pipeline `timeout` option |
-| No Discord message on failure | Verify credential ID is `discord-webhook-url` and `curl` is available on the agent |
+| No Discord/Slack message on failure | Verify credentials `discord-webhook-url` and `slack-webhook-url` are bound in Build Environment |
 | Headless Chrome crashes on Linux | `--no-sandbox` and `--disable-dev-shm-usage` are already set in the test |
