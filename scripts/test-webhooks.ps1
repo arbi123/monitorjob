@@ -8,8 +8,6 @@ if (-not $DiscordUrl -and -not $SlackUrl) {
     exit 1
 }
 
-$message = "✅ **Kosova Ticket Monitor** webhook test`nBoth Discord and Slack are configured. You will be alerted when Ireland / Nations League tickets appear."
-
 if ($DiscordUrl) {
     $env:DISCORD_WEBHOOK_URL = $DiscordUrl
 }
@@ -17,5 +15,5 @@ if ($SlackUrl) {
     $env:SLACK_WEBHOOK_URL = $SlackUrl
 }
 
-& "$PSScriptRoot\send-alert.ps1" -Message $message
+& "$PSScriptRoot\send-alert.ps1" -EventDetected
 Write-Host "Webhook test complete."

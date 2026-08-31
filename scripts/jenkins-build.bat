@@ -9,8 +9,7 @@ call "%MAVEN_HOME%\bin\mvn.cmd" -B clean test
 set EXIT_CODE=%ERRORLEVEL%
 
 if %EXIT_CODE% neq 0 (
-  set MSG=🚨 **%JOB_NAME%** build **#%BUILD_NUMBER%** FAILED`nIreland / Nations League tickets detected!`n%BUILD_URL%
-  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0send-alert.ps1" -Message "%MSG%"
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0send-alert.ps1" -EventDetected
 )
 
 exit /b %EXIT_CODE%

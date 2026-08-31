@@ -1,7 +1,24 @@
 param(
-    [Parameter(Mandatory = $true)]
-    [string]$Message
+    [string]$Message,
+    [switch]$EventDetected
 )
+
+if ($EventDetected) {
+    $url = if ($env:MONITOR_URLS) { ($env:MONITOR_URLS -split ',')[0].Trim() } else { 'https://eu.ebileta.al/biglietteria/listaEventiPub.do' }
+    $time = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $Message = @"
+An event with Ireland has been added to the ticket website!
+
+Go there and buy your tickets now:
+$url
+
+Detected at: $time
+"@
+}
+
+if (-not $Message) {
+    throw 'Provide -Message or use -EventDetected.'
+}
 
 function Send-JsonPost {
     param(

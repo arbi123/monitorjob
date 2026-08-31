@@ -37,10 +37,7 @@ pipeline {
 
     post {
         failure {
-            sh '''
-                MESSAGE="🚨 **${JOB_NAME}** build **#${BUILD_NUMBER}** FAILED\\nIreland / Nations League tickets detected!\\n${BUILD_URL}"
-                scripts/send-alert.sh "$MESSAGE"
-            '''
+            sh 'scripts/send-alert.sh "$(scripts/build-alert-message.sh)"'
         }
     }
 }

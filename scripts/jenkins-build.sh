@@ -8,7 +8,7 @@ mvn -B clean test
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
-  MESSAGE="🚨 **${JOB_NAME:-monitor}** build **#${BUILD_NUMBER:-local}** FAILED\nIreland / Nations League keywords detected on ticket page.\n${BUILD_URL:-}"
+  MESSAGE="$("$(dirname "$0")/build-alert-message.sh")"
   "$(dirname "$0")/send-alert.sh" "$MESSAGE"
 fi
 
